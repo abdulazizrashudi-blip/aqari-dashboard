@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>لوحة التحكم — عقاري</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="site-header">
+  <div class="header-inner">
+    <a href="https://abdulazizrashudi-blip.github.io/" class="brand">
+      <span class="logo-badge">🏠</span>
+      عقاري
+    </a>
+    <nav class="main-nav">
+      <a href="https://abdulazizrashudi-blip.github.io/">الرئيسية</a>
+      <a href="https://abdulazizrashudi-blip.github.io/aqari-dashboard/" class="active">لوحة التحكم</a>
+      <a href="https://abdulazizrashudi-blip.github.io/aqari-owners/">ملاك العقارات</a>
+    </nav>
+  </div>
+</header>
+
+<main class="section">
+  <div class="section-head">
+    <h2>لوحة تحكم الإدارة</h2>
+  </div>
+
+  <div class="notice">
+    ⚠️ <div>هذه لوحة تحكم تجريبية: الإضافة والتعديل والحذف تُحفظ داخل متصفحك فقط (localStorage) وما تنعكس على زوّار آخرين. لتفعيل نظام حقيقي بحسابات وصلاحيات، نحتاج نربط قاعدة بيانات وخدمة تسجيل دخول.</div>
+  </div>
+
+  <div class="stats-row" id="stats-row"></div>
+
+  <div class="panel">
+    <div class="panel-head">
+      <h3 id="form-title">إضافة عقار جديد</h3>
+      <button class="btn btn-outline" id="cancel-edit" style="display:none">إلغاء التعديل</button>
+    </div>
+    <form id="property-form">
+      <input type="hidden" id="edit-id">
+      <div class="form-grid">
+        <div class="field full">
+          <label>عنوان العقار</label>
+          <input type="text" id="p-title" required placeholder="مثال: شقة عصرية بحي النرجس">
+        </div>
+        <div class="field">
+          <label>المدينة</label>
+          <select id="p-city" required></select>
+        </div>
+        <div class="field">
+          <label>نوع العقار</label>
+          <select id="p-type" required></select>
+        </div>
+        <div class="field">
+          <label>الحالة</label>
+          <select id="p-status" required>
+            <option value="sale">للبيع</option>
+            <option value="rent">للإيجار</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>السعر (ريال)</label>
+          <input type="number" id="p-price" required min="0" placeholder="0">
+        </div>
+        <div class="field">
+          <label>المساحة (م²)</label>
+          <input type="number" id="p-area" required min="0" placeholder="0">
+        </div>
+        <div class="field">
+          <label>عدد الغرف</label>
+          <input type="number" id="p-rooms" min="0" placeholder="0">
+        </div>
+        <div class="field full">
+          <label>المالك</label>
+          <select id="p-owner" required></select>
+        </div>
+      </div>
+      <div style="margin-top:16px; display:flex; gap:10px;">
+        <button type="submit" class="btn btn-primary" id="submit-btn">إضافة العقار</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head">
+      <h3>كل العقارات (<span id="table-count">0</span>)</h3>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>العقار</th>
+            <th>المدينة</th>
+            <th>النوع</th>
+            <th>الحالة</th>
+            <th>السعر</th>
+            <th>المالك</th>
+            <th>إجراءات</th>
+          </tr>
+        </thead>
+        <tbody id="properties-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div><strong>عقاري</strong> — منصة تجريبية لعرض العقارات</div>
+  <div>هذا موقع عرض (Demo) والبيانات تُحفظ محليًا في متصفحك فقط</div>
+</footer>
+
+<script src="app.js"></script>
+<script>
+  const cityEl = document.getElementById('p-city');
+  const typeEl = document.getElementById('p-type');
+  const ownerEl = document.getElementById('p-owner');
+  const tbody = document.getElementById('properties-tbody');
+  const tableCount = document.getElementById('table-count');
+  const statsRow = document.getElementById('stats-row');
+  const form = document.getElementById('property-form');
+  const editIdEl = document.getElementById('edit-id');
+  const formTitle = document.getElementById('form-title');
+  const submitBtn = document.getElementById('submit-btn');
+  const cancelEditBtn = document.getElementById('cancel-edit');
+
+  fillOptions(cityEl, CITIES, 'اختر المدينة');
+  fillOptions(typeEl, PROPERTY_TYPES, 'اختر النوع');
+  fillOwnerOptions(ownerEl);
+
+  function renderStats() {
+    const props = getProperties();
+    const owners = getOwners();
+    const totalValue = props.reduce((sum, p) => sum + Number(p.price || 0), 0);
+    const forSale = props.filter(p => p.status === 'sale').length;
+    const stats = [
+      { icon: '🏠', num: props.length, label: 'إجمالي العقارات' },
+      { icon: '👤', num: owners.length, label: 'ملاك العقارات' },
+      { icon: '🏷️', num: forSale, label: 'عقارات للبيع' },
+      { icon: '💰', num: formatPrice(totalValue) + ' ريال', label: 'إجمالي قيمة العقارات' },
+    ];
+    statsRow.innerHTML = stats.map(s => `
+      <div class="stat-card">
+        <div class="stat-ic">${s.icon}</div>
+        <div>
+          <div class="stat-num">${s.num}</div>
+          <div class="stat-label">${s.label}</div>
+        </div>
+      </div>`).join('');
+  }
+
+  function renderTable() {
+    const props = getProperties();
+    tableCount.textContent = props.length;
+    if (!props.length) {
+      tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:var(--muted); padding:30px;">لا توجد عقارات مضافة</td></tr>`;
+      return;
+    }
+    tbody.innerHTML = props.map(p => `
+      <tr>
+        <td>${p.title}</td>
+        <td>${p.city}</td>
+        <td>${p.type}</td>
+        <td><span class="tag ${p.status === 'rent' ? 'rent' : 'sale'}">${p.status === 'rent' ? 'للإيجار' : 'للبيع'}</span></td>
+        <td>${formatPrice(p.price)} ر.س</td>
+        <td>${getOwnerName(p.ownerId)}</td>
+        <td>
+          <div class="row-actions">
+            <button class="icon-btn" data-edit="${p.id}">تعديل</button>
+            <button class="icon-btn danger" data-del="${p.id}">حذف</button>
+          </div>
+        </td>
+      </tr>`).join('');
+  }
+
+  function refreshAll() {
+    renderStats();
+    renderTable();
+  }
+
+  function resetForm() {
+    form.reset();
+    editIdEl.value = '';
+    formTitle.textContent = 'إضافة عقار جديد';
+    submitBtn.textContent = 'إضافة العقار';
+    cancelEditBtn.style.display = 'none';
+  }
+
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    const props = getProperties();
+    const data = {
+      title: document.getElementById('p-title').value.trim(),
+      city: cityEl.value,
+      type: typeEl.value,
+      status: document.getElementById('p-status').value,
+      price: Number(document.getElementById('p-price').value || 0),
+      area: Number(document.getElementById('p-area').value || 0),
+      rooms: Number(document.getElementById('p-rooms').value || 0),
+      ownerId: ownerEl.value,
+    };
+    if (!data.title || !data.city || !data.type || !data.ownerId) return;
+
+    if (editIdEl.value) {
+      const idx = props.findIndex(p => p.id === editIdEl.value);
+      if (idx > -1) props[idx] = { ...props[idx], ...data };
+    } else {
+      props.unshift({ id: uid('p'), featured: false, ...data });
+    }
+    saveProperties(props);
+    resetForm();
+    refreshAll();
+  });
+
+  cancelEditBtn.addEventListener('click', resetForm);
+
+  tbody.addEventListener('click', function (e) {
+    const editId = e.target.getAttribute('data-edit');
+    const delId = e.target.getAttribute('data-del');
+    if (editId) {
+      const p = getProperties().find(x => x.id === editId);
+      if (!p) return;
+      editIdEl.value = p.id;
+      document.getElementById('p-title').value = p.title;
+      cityEl.value = p.city;
+      typeEl.value = p.type;
+      document.getElementById('p-status').value = p.status;
+      document.getElementById('p-price').value = p.price;
+      document.getElementById('p-area').value = p.area;
+      document.getElementById('p-rooms').value = p.rooms;
+      ownerEl.value = p.ownerId;
+      formTitle.textContent = 'تعديل العقار';
+      submitBtn.textContent = 'حفظ التعديلات';
+      cancelEditBtn.style.display = 'inline-block';
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+    if (delId) {
+      if (!confirm('متأكد تبي تحذف هذا العقار؟')) return;
+      const props = getProperties().filter(p => p.id !== delId);
+      saveProperties(props);
+      refreshAll();
+    }
+  });
+
+  refreshAll();
+</script>
+</body>
+</html>
