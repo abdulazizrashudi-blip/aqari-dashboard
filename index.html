@@ -73,6 +73,10 @@
           <select id="p-city" required></select>
         </div>
         <div class="field">
+          <label>الحي (اختياري)</label>
+          <input type="text" id="p-neighborhood" placeholder="مثال: النرجس">
+        </div>
+        <div class="field">
           <label>نوع العقار</label>
           <select id="p-type" required></select>
         </div>
@@ -81,6 +85,14 @@
           <select id="p-status" required>
             <option value="sale">للبيع</option>
             <option value="rent">للإيجار</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>مدة الإيجار (لو للإيجار)</label>
+          <select id="p-period">
+            <option value="">—</option>
+            <option value="monthly">شهري</option>
+            <option value="yearly">سنوي</option>
           </select>
         </div>
         <div class="field">
@@ -99,7 +111,26 @@
           <label>المالك</label>
           <select id="p-owner" required></select>
         </div>
+        <div class="field full">
+          <label>وصف تفصيلي (اختياري)</label>
+          <input type="text" id="p-description" placeholder="تفاصيل إضافية عن العقار تظهر بصفحته الخاصة">
+        </div>
+        <div class="field full">
+          <label>رابط صورة (اختياري)</label>
+          <input type="text" id="p-image" placeholder="https://...">
+        </div>
+        <div class="field">
+          <label>خط العرض Latitude (اختياري)</label>
+          <input type="number" id="p-lat" step="any" placeholder="مثال: 26.3260">
+        </div>
+        <div class="field">
+          <label>خط الطول Longitude (اختياري)</label>
+          <input type="number" id="p-lng" step="any" placeholder="مثال: 43.9750">
+        </div>
       </div>
+      <p style="color:var(--muted); font-size:12px; margin-top:8px;">
+        عشان تجيب الإحداثيات: افتح موقع العقار في Google Maps، اضغط بزر الفأرة الأيمن على النقطة، وانسخ أول رقمين.
+      </p>
       <div style="margin-top:16px; display:flex; gap:10px;">
         <button type="submit" class="btn btn-primary" id="submit-btn">إضافة العقار</button>
       </div>
@@ -187,6 +218,80 @@
     </div>
   </div>
 
+  <!-- طلبات عرض العقار -->
+  <div class="panel">
+    <div class="panel-head">
+      <h3>طلبات "اعرض عقارك" (<span id="offers-count">0</span>)</h3>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>الاسم</th>
+            <th>الجوال</th>
+            <th>المدينة</th>
+            <th>النوع</th>
+            <th>الغرض</th>
+            <th>ملاحظات</th>
+            <th>إجراءات</th>
+          </tr>
+        </thead>
+        <tbody id="offers-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- طلبات العملاء العقارية -->
+  <div class="panel">
+    <div class="panel-head">
+      <h3>طلبات العملاء العقارية (<span id="requests-count">0</span>)</h3>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>الاسم</th>
+            <th>الجوال</th>
+            <th>المدينة</th>
+            <th>النوع</th>
+            <th>الغرض</th>
+            <th>الميزانية</th>
+            <th>ملاحظات</th>
+            <th>إجراءات</th>
+          </tr>
+        </thead>
+        <tbody id="requests-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- إحصائيات الثقة بالصفحة الرئيسية -->
+  <div class="panel">
+    <div class="panel-head">
+      <h3>إحصائيات الثقة (تظهر بالصفحة الرئيسية)</h3>
+    </div>
+    <div id="stats-alert"></div>
+    <form id="stats-form">
+      <div class="form-grid">
+        <div class="field">
+          <label>سنوات الخبرة</label>
+          <input type="number" id="st-years" min="0" placeholder="0">
+        </div>
+        <div class="field">
+          <label>عدد العملاء</label>
+          <input type="number" id="st-clients" min="0" placeholder="0">
+        </div>
+        <div class="field">
+          <label>عدد العقارات المسوّقة</label>
+          <input type="number" id="st-marketed" min="0" placeholder="0">
+        </div>
+      </div>
+      <div style="margin-top:16px;">
+        <button type="submit" class="btn btn-primary" id="stats-submit-btn">حفظ الإحصائيات</button>
+      </div>
+    </form>
+  </div>
+
 </main>
 
 <footer class="site-footer">
@@ -200,6 +305,8 @@
     auth, watchAuth, loginAdmin, logout, checkIsAdmin,
     getProperties, addProperty, updateProperty, deleteProperty,
     getOwners, createOwnerAccount,
+    getLeadsOffers, getLeadsRequests, deleteLeadOffer, deleteLeadRequest,
+    getStats, updateStats,
   } from './firebase.js';
 
   const loginWrap = document.getElementById('login-wrap');
@@ -211,8 +318,19 @@
   const logoutBtn = document.getElementById('logout-btn');
 
   const cityEl = document.getElementById('p-city');
+  const neighborhoodEl = document.getElementById('p-neighborhood');
   const typeEl = document.getElementById('p-type');
+  const statusEl = document.getElementById('p-status');
+  const periodEl = document.getElementById('p-period');
+  const priceEl = document.getElementById('p-price');
+  const areaEl = document.getElementById('p-area');
+  const roomsEl = document.getElementById('p-rooms');
   const ownerEl = document.getElementById('p-owner');
+  const descriptionEl = document.getElementById('p-description');
+  const imageEl = document.getElementById('p-image');
+  const latEl = document.getElementById('p-lat');
+  const lngEl = document.getElementById('p-lng');
+
   const tbody = document.getElementById('properties-tbody');
   const tableCount = document.getElementById('table-count');
   const statsRow = document.getElementById('stats-row');
@@ -227,6 +345,15 @@
   const ownerSubmitBtn = document.getElementById('owner-submit-btn');
   const ownersTbody = document.getElementById('owners-tbody');
   const ownersCount = document.getElementById('owners-count');
+
+  const offersTbody = document.getElementById('offers-tbody');
+  const offersCount = document.getElementById('offers-count');
+  const requestsTbody = document.getElementById('requests-tbody');
+  const requestsCount = document.getElementById('requests-count');
+
+  const statsForm = document.getElementById('stats-form');
+  const statsAlert = document.getElementById('stats-alert');
+  const statsSubmitBtn = document.getElementById('stats-submit-btn');
 
   fillOptions(cityEl, CITIES, 'اختر المدينة');
   fillOptions(typeEl, PROPERTY_TYPES, 'اختر النوع');
@@ -283,13 +410,20 @@
   // ---------------- تحميل البيانات ----------------
   async function loadAll() {
     try {
-      const [props, owners] = await Promise.all([getProperties(), getOwners()]);
+      const [props, owners, offers, requests, stats] = await Promise.all([
+        getProperties(), getOwners(), getLeadsOffers(), getLeadsRequests(), getStats(),
+      ]);
       currentProperties = props;
       currentOwners = owners;
       fillOwnerOptions(ownerEl, owners);
       renderStats();
       renderTable();
       renderOwnersTable();
+      renderOffersTable(offers);
+      renderRequestsTable(requests);
+      document.getElementById('st-years').value = stats.yearsExperience || '';
+      document.getElementById('st-clients').value = stats.happyClients || '';
+      document.getElementById('st-marketed').value = stats.propertiesMarketed || '';
     } catch (err) {
       console.error(err);
     }
@@ -360,6 +494,89 @@
     }).join('');
   }
 
+  function renderOffersTable(offers) {
+    offersCount.textContent = offers.length;
+    if (!offers.length) {
+      offersTbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:var(--muted); padding:30px;">لا توجد طلبات حاليًا</td></tr>`;
+      return;
+    }
+    offersTbody.innerHTML = offers.map(o => `
+      <tr>
+        <td>${o.name || '—'}</td>
+        <td>${o.phone || '—'}</td>
+        <td>${o.city || '—'}</td>
+        <td>${o.type || '—'}</td>
+        <td>${o.status === 'rent' ? 'إيجار' : 'بيع'}</td>
+        <td>${o.notes || '—'}</td>
+        <td><button class="icon-btn danger" data-del-offer="${o.id}">حذف</button></td>
+      </tr>`).join('');
+  }
+
+  function renderRequestsTable(requests) {
+    requestsCount.textContent = requests.length;
+    if (!requests.length) {
+      requestsTbody.innerHTML = `<tr><td colspan="8" style="text-align:center; color:var(--muted); padding:30px;">لا توجد طلبات حاليًا</td></tr>`;
+      return;
+    }
+    requestsTbody.innerHTML = requests.map(r => `
+      <tr>
+        <td>${r.name || '—'}</td>
+        <td>${r.phone || '—'}</td>
+        <td>${r.city || '—'}</td>
+        <td>${r.type || '—'}</td>
+        <td>${r.status === 'rent' ? 'إيجار' : 'شراء'}</td>
+        <td>${r.budget ? formatPrice(r.budget) + ' ر.س' : '—'}</td>
+        <td>${r.notes || '—'}</td>
+        <td><button class="icon-btn danger" data-del-request="${r.id}">حذف</button></td>
+      </tr>`).join('');
+  }
+
+  offersTbody.addEventListener('click', async function (e) {
+    const id = e.target.getAttribute('data-del-offer');
+    if (!id) return;
+    if (!confirm('حذف هذا الطلب؟')) return;
+    try {
+      await deleteLeadOffer(id);
+      renderOffersTable(await getLeadsOffers());
+    } catch (err) {
+      alert('تعذّر الحذف');
+      console.error(err);
+    }
+  });
+
+  requestsTbody.addEventListener('click', async function (e) {
+    const id = e.target.getAttribute('data-del-request');
+    if (!id) return;
+    if (!confirm('حذف هذا الطلب؟')) return;
+    try {
+      await deleteLeadRequest(id);
+      renderRequestsTable(await getLeadsRequests());
+    } catch (err) {
+      alert('تعذّر الحذف');
+      console.error(err);
+    }
+  });
+
+  statsForm.addEventListener('submit', async function (e) {
+    e.preventDefault();
+    clearAlert(statsAlert);
+    const data = {
+      yearsExperience: Number(document.getElementById('st-years').value || 0),
+      happyClients: Number(document.getElementById('st-clients').value || 0),
+      propertiesMarketed: Number(document.getElementById('st-marketed').value || 0),
+    };
+    statsSubmitBtn.disabled = true;
+    try {
+      await updateStats(data);
+      showAlert(statsAlert, 'تم حفظ الإحصائيات بنجاح', 'success');
+    } catch (err) {
+      showAlert(statsAlert, 'تعذّر الحفظ، حاول مرة أخرى', 'error');
+      console.error(err);
+    } finally {
+      statsSubmitBtn.disabled = false;
+    }
+  });
+
   function resetForm() {
     form.reset();
     editIdEl.value = '';
@@ -370,15 +587,23 @@
 
   form.addEventListener('submit', async function (e) {
     e.preventDefault();
+    const lat = latEl.value.trim();
+    const lng = lngEl.value.trim();
     const data = {
       title: document.getElementById('p-title').value.trim(),
       city: cityEl.value,
+      neighborhood: neighborhoodEl.value.trim(),
       type: typeEl.value,
-      status: document.getElementById('p-status').value,
-      price: Number(document.getElementById('p-price').value || 0),
-      area: Number(document.getElementById('p-area').value || 0),
-      rooms: Number(document.getElementById('p-rooms').value || 0),
+      status: statusEl.value,
+      rentPeriod: statusEl.value === 'rent' ? (periodEl.value || '') : '',
+      price: Number(priceEl.value || 0),
+      area: Number(areaEl.value || 0),
+      rooms: Number(roomsEl.value || 0),
       ownerId: ownerEl.value,
+      description: descriptionEl.value.trim(),
+      imageUrl: imageEl.value.trim(),
+      lat: lat !== '' ? Number(lat) : null,
+      lng: lng !== '' ? Number(lng) : null,
     };
     if (!data.title || !data.city || !data.type || !data.ownerId) return;
 
@@ -410,12 +635,18 @@
       editIdEl.value = p.id;
       document.getElementById('p-title').value = p.title;
       cityEl.value = p.city;
+      neighborhoodEl.value = p.neighborhood || '';
       typeEl.value = p.type;
-      document.getElementById('p-status').value = p.status;
-      document.getElementById('p-price').value = p.price;
-      document.getElementById('p-area').value = p.area;
-      document.getElementById('p-rooms').value = p.rooms;
+      statusEl.value = p.status;
+      periodEl.value = p.rentPeriod || '';
+      priceEl.value = p.price;
+      areaEl.value = p.area;
+      roomsEl.value = p.rooms;
       ownerEl.value = p.ownerId;
+      descriptionEl.value = p.description || '';
+      imageEl.value = p.imageUrl || '';
+      latEl.value = typeof p.lat === 'number' ? p.lat : '';
+      lngEl.value = typeof p.lng === 'number' ? p.lng : '';
       formTitle.textContent = 'تعديل العقار';
       submitBtn.textContent = 'حفظ التعديلات';
       cancelEditBtn.style.display = 'inline-block';
