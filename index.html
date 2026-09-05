@@ -282,7 +282,7 @@
     </form>
   </div>
 
-</main>
+<div class="panel"><div class="panel-head"><h3>معلومات التواصل والسوشيال ميديا (تظهر بالفوتر بكل الصفحات)</h3></div><div id="contact-alert"></div><form id="contact-form"><div class="form-grid"><div class="field"><label>رقم واتساب عام</label><input type="text" id="ct-whatsapp" placeholder="05xxxxxxxx"></div><div class="field"><label>رقم هاتف عام</label><input type="text" id="ct-phone" placeholder="05xxxxxxxx"></div><div class="field"><label>رابط انستقرام</label><input type="text" id="ct-instagram" placeholder="https://instagram.com/..."></div><div class="field"><label>رابط تويتر (X)</label><input type="text" id="ct-twitter" placeholder="https://x.com/..."></div><div class="field"><label>رابط سناب شات</label><input type="text" id="ct-snapchat" placeholder="https://snapchat.com/add/..."></div></div><div style="margin-top:16px;"><button type="submit" class="btn btn-primary" id="contact-submit-btn">حفظ معلومات التواصل</button></div></form></div></main>
 
 <footer class="site-footer">
   <div><strong>عقاري</strong> — منصة عقارية</div> <div id="footer-contact" class="footer-contact"></div>
@@ -296,7 +296,7 @@
     getProperties, addProperty, updateProperty, deleteProperty,
     getOwners, createOwnerAccount,
     getLeadsOffers, getLeadsRequests, deleteLeadOffer, deleteLeadRequest,
-    getStats, updateStats,
+    getStats, updateStats, getContactInfo, updateContactInfo,
   } from './firebase.js';
 
   const loginWrap = document.getElementById('login-wrap');
@@ -343,7 +343,7 @@
 
   const statsForm = document.getElementById('stats-form');
   const statsAlert = document.getElementById('stats-alert');
-  const statsSubmitBtn = document.getElementById('stats-submit-btn');
+  const statsSubmitBtn = document.getElementById('stats-submit-btn'); const contactForm = document.getElementById('contact-form'); const contactAlert = document.getElementById('contact-alert'); const contactSubmitBtn = document.getElementById('contact-submit-btn');
 
   fillOptions(cityEl, CITIES, 'اختر المدينة');
   fillOptions(typeEl, PROPERTY_TYPES, 'اختر النوع');
@@ -398,8 +398,8 @@
   // ---------------- تحميل البيانات ----------------
   async function loadAll() {
     try {
-      const [props, owners, offers, requests, stats] = await Promise.all([
-        getProperties(), getOwners(), getLeadsOffers(), getLeadsRequests(), getStats(),
+      const [props, owners, offers, requests, stats, contact] = await Promise.all([
+        getProperties(), getOwners(), getLeadsOffers(), getLeadsRequests(), getStats(), getContactInfo(),
       ]);
       currentProperties = props;
       currentOwners = owners;
@@ -411,7 +411,7 @@
       renderRequestsTable(requests);
       document.getElementById('st-years').value = stats.yearsExperience || '';
       document.getElementById('st-clients').value = stats.happyClients || '';
-      document.getElementById('st-marketed').value = stats.propertiesMarketed || '';
+      document.getElementById('st-marketed').value = stats.propertiesMarketed || ''; document.getElementById('ct-whatsapp').value = contact.whatsapp || ''; document.getElementById('ct-phone').value = contact.phone || ''; document.getElementById('ct-instagram').value = contact.instagram || ''; document.getElementById('ct-twitter').value = contact.twitter || ''; document.getElementById('ct-snapchat').value = contact.snapchat || '';
     } catch (err) {
       console.error(err);
     }
@@ -565,7 +565,7 @@
     }
   });
 
-  function resetForm() { form.reset(); editIdEl.value = ''; formTitle.textContent = 'إضافة عقار جديد'; submitBtn.textContent = 'إضافة العقار'; cancelEditBtn.style.display = 'none'; clearPickerLocation(); }
+  contactForm.addEventListener('submit', async function (e) { e.preventDefault(); clearAlert(contactAlert); const data = { whatsapp: document.getElementById('ct-whatsapp').value.trim(), phone: document.getElementById('ct-phone').value.trim(), instagram: document.getElementById('ct-instagram').value.trim(), twitter: document.getElementById('ct-twitter').value.trim(), snapchat: document.getElementById('ct-snapchat').value.trim(), }; contactSubmitBtn.disabled = true; try { await updateContactInfo(data); showAlert(contactAlert, 'تم حفظ معلومات التواصل بنجاح', 'success'); } catch (err) { showAlert(contactAlert, 'تعذّر الحفظ، حاول مرة أخرى', 'error'); console.error(err); } finally { contactSubmitBtn.disabled = false; } }); function resetForm() { form.reset(); editIdEl.value = ''; formTitle.textContent = 'إضافة عقار جديد'; submitBtn.textContent = 'إضافة العقار'; cancelEditBtn.style.display = 'none'; clearPickerLocation(); }
 
   form.addEventListener('submit', async function (e) {
     e.preventDefault();
