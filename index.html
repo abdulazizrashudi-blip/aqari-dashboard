@@ -109,7 +109,7 @@
         </div>
         <div class="field full">
           <label>المالك</label>
-          <select id="p-owner" required></select>
+          <select id="p-owner" required></select></div><div class="field full" style="display:flex;align-items:center;gap:8px;"><input type="checkbox" id="p-verified" style="width:auto;"><label for="p-verified" style="margin:0;">عقار موثّق (تظهر عليه شارة تحقق للزوار)</label>
         </div>
         <div class="field full">
           <label>وصف تفصيلي (اختياري)</label>
@@ -317,7 +317,7 @@
   const roomsEl = document.getElementById('p-rooms');
   const ownerEl = document.getElementById('p-owner');
   const descriptionEl = document.getElementById('p-description');
-  const imageEl = document.getElementById('p-image');
+  const imageEl = document.getElementById('p-image'); const verifiedEl = document.getElementById('p-verified');
   const latEl = document.getElementById('p-lat');
   const lngEl = document.getElementById('p-lng'); let pickerMap = null; let pickerMarker = null; const PICKER_DEFAULT_CENTER = [24.7136, 46.6753]; function initPickerMap() { const mapEl = document.getElementById('p-map'); if (!mapEl) return; if (pickerMap) { pickerMap.invalidateSize(); return; } pickerMap = L.map('p-map').setView(PICKER_DEFAULT_CENTER, 6); L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap', maxZoom: 19 }).addTo(pickerMap); pickerMap.on('click', function (e) { setPickerLocation(e.latlng.lat, e.latlng.lng); }); const initLat = latEl.value.trim(); const initLng = lngEl.value.trim(); if (initLat !== '' && initLng !== '') { setPickerLocation(Number(initLat), Number(initLng), true); } } function setPickerLocation(lat, lng, skipInputs) { if (!pickerMap) return; if (pickerMarker) { pickerMarker.setLatLng([lat, lng]); } else { pickerMarker = L.marker([lat, lng], { draggable: true }).addTo(pickerMap); pickerMarker.on('dragend', function () { const pos = pickerMarker.getLatLng(); setPickerLocation(pos.lat, pos.lng); }); } pickerMap.setView([lat, lng], 13); if (!skipInputs) { latEl.value = lat.toFixed(6); lngEl.value = lng.toFixed(6); } } function clearPickerLocation() { if (pickerMarker && pickerMap) { pickerMap.removeLayer(pickerMarker); pickerMarker = null; } if (pickerMap) pickerMap.setView(PICKER_DEFAULT_CENTER, 6); } function syncPickerFromInputs() { const lat = parseFloat(latEl.value); const lng = parseFloat(lngEl.value); if (!isNaN(lat) && !isNaN(lng)) setPickerLocation(lat, lng, true); } latEl.addEventListener('change', syncPickerFromInputs); lngEl.addEventListener('change', syncPickerFromInputs);
 
@@ -449,7 +449,7 @@
     }
     tbody.innerHTML = currentProperties.map(p => `
       <tr>
-        <td>${p.title}</td>
+        <td>${p.title}${p.verified ? ' <span title="موثّق" style="color:#0891b2;">✓</span>' : ''}</td>
         <td>${p.city}</td>
         <td>${p.type}</td>
         <td><span class="tag ${p.status === 'rent' ? 'rent' : 'sale'}">${p.status === 'rent' ? 'للإيجار' : 'للبيع'}</span></td>
@@ -583,7 +583,7 @@
       rooms: Number(roomsEl.value || 0),
       ownerId: ownerEl.value,
       description: descriptionEl.value.trim(),
-      imageUrl: imageEl.value.trim(),
+      imageUrl: imageEl.value.trim(), verified: verifiedEl.checked,
       lat: lat !== '' ? Number(lat) : null,
       lng: lng !== '' ? Number(lng) : null,
     };
@@ -626,7 +626,7 @@
       roomsEl.value = p.rooms;
       ownerEl.value = p.ownerId;
       descriptionEl.value = p.description || '';
-      imageEl.value = p.imageUrl || '';
+      imageEl.value = p.imageUrl || ''; verifiedEl.checked = !!p.verified;
       latEl.value = typeof p.lat === 'number' ? p.lat : ''; lngEl.value = typeof p.lng === 'number' ? p.lng : ''; if (typeof p.lat === 'number' && typeof p.lng === 'number') { setPickerLocation(p.lat, p.lng, true); } else { clearPickerLocation(); }
       formTitle.textContent = 'تعديل العقار';
       submitBtn.textContent = 'حفظ التعديلات';
