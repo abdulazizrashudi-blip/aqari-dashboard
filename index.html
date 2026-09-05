@@ -290,7 +290,7 @@
 </footer>
 
 <script src="app.js"></script><script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script type="module"> import { getContactInfo } from './firebase.js'; getContactInfo().then(c => renderFooterContact(document.getElementById('footer-contact'), c)).catch(() => {});
+<script type="module"> getContactInfo().then(c => renderFooterContact(document.getElementById('footer-contact'), c)).catch(() => {});
   import {
     auth, watchAuth, loginAdmin, logout, checkIsAdmin,
     getProperties, addProperty, updateProperty, deleteProperty,
